@@ -34,6 +34,25 @@ git clone https://github.com/ndleah/sparkify-data-pipeline.git
 ```
 cd sparkify-data-pipeline
 ```
+#### Create python virtual environment
+```
+python3 -m venv venv             # create virtualenv
+source venv/bin/activate         # activate virtualenv
+pip install -r requirements.txt  # install requirements
+```
+
+#### Start Airflow container
+Everything is configured in the docker-compose.yml file.
+If you are satisfied with the default configurations you can just start the containers.
+```
+docker-compose up
+```
+
+#### Visit the Airflow UI
+Go to http://localhost:8080
+
+Username: airflow
+Password: airflow
 
 ### Connect Airflow to AWS
 
