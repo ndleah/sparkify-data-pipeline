@@ -1,20 +1,3 @@
-# Project 5: Data Pipelines with Airflow
-
-## Summary
-- [Project 5: Data Pipelines with Airflow](#project-5-data-pipelines-with-airflow)
-  - [Summary](#summary)
-- [Sparkify - Data Pipelines ](#sparkify---data-pipelines-)
-  - [Introduction](#introduction)
-  - [Dataset](#dataset)
-    - [ELT Process](#elt-process)
-    - [Sources](#sources)
-    - [Destinations](#destinations)
-        - [Prerequisite](#prerequisite)
-    - [Project Structure](#project-structure)
-    - [Data Quality Checks](#data-quality-checks)
-
---------------------------------------------
-
 ![Star Badge](https://img.shields.io/static/v1?label=%F0%9F%8C%9F&message=If%20Useful&style=style=flat&color=BC4E99)
 ![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)
 # Sparkify - Data Pipelines <img src="https://static.vecteezy.com/system/resources/previews/009/726/165/original/pixel-art-isometric-islands-in-the-sky-with-trees-bridge-lake-and-fence-8bit-game-scenario-vector.jpg" align="right" width="150" />
