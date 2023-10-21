@@ -1,3 +1,20 @@
+# Project 5: Data Pipelines with Airflow
+
+## Summary
+- [Project 5: Data Pipelines with Airflow](#project-5-data-pipelines-with-airflow)
+  - [Summary](#summary)
+- [Sparkify - Data Pipelines ](#sparkify---data-pipelines-)
+  - [Introduction](#introduction)
+  - [Dataset](#dataset)
+    - [ELT Process](#elt-process)
+    - [Sources](#sources)
+    - [Destinations](#destinations)
+        - [Prerequisite](#prerequisite)
+    - [Project Structure](#project-structure)
+    - [Data Quality Checks](#data-quality-checks)
+
+--------------------------------------------
+
 ![Star Badge](https://img.shields.io/static/v1?label=%F0%9F%8C%9F&message=If%20Useful&style=style=flat&color=BC4E99)
 ![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.svg?v=103)
 # Sparkify - Data Pipelines <img src="https://static.vecteezy.com/system/resources/previews/009/726/165/original/pixel-art-isometric-islands-in-the-sky-with-trees-bridge-lake-and-fence-8bit-game-scenario-vector.jpg" align="right" width="150" />
@@ -16,74 +33,70 @@ resides in AWS S3 (publically available).
 1. Song data from [Million Song Dataset](http://millionsongdataset.com/)
 2. User activity data from [Event Simulator](https://github.com/Interana/eventsim) based on [Million Song Dataset](http://millionsongdataset.com/)
 
-## Star Schema Design
-![Airflow DAG](assets/ERD.png)
-## Requirements
+### ELT Process
 
-* Install [Python3](https://www.python.org/downloads/)
-* Install [Docker](https://www.docker.com/)
-* Install [Docker Compose](https://docs.docker.com/compose/install/)
-* [AWS](https://aws.amazon.com/) account and [Redshift](https://aws.amazon.com/redshift/) cluster 
+The tool used for scheduling and orchestrationg ELT is Apache Airflow.
 
-### Clone repository to local machine
-```
-git clone https://github.com/ndleah/sparkify-data-pipeline.git
-```
+'Airflow is a platform to programmatically author, schedule and monitor workflows.'
 
-### Change directory to local repository
-```
-cd sparkify-data-pipeline
-```
-#### Create python virtual environment
-```
-python3 -m venv venv             # create virtualenv
-source venv/bin/activate         # activate virtualenv
-pip install -r requirements.txt  # install requirements
-```
+Source: [Apache Foundation](https://airflow.apache.org/)
 
-#### Start Airflow container
-Everything is configured in the docker-compose.yml file.
-If you are satisfied with the default configurations you can just start the containers.
-```
-docker-compose up
-```
+The schema of the ELT is this DAG:
 
-#### Visit the Airflow UI
-Go to http://localhost:8080
+![DAG](./images/dag.png)
 
-Username: airflow
-Password: airflow
+### Sources
 
-### Connect Airflow to AWS
+The sources are the same than previous projects:
 
-1. Click on the Admin tab and select Connections.
-![Admin tab](https://video.udacity-data.com/topher/2019/February/5c5aaca1_admin-connections/admin-connections.png)
+* `Log data: s3://udacity-dend/log_data`
+* `Song data: s3://udacity-dend/song_data`
 
-2. Under Connections, select Create.
+### Destinations
 
-3. On the create connection page, enter the following values:
-- Conn Id: Enter aws_credentials.
-- Conn Type: Enter Amazon Web Services.
-- Login: Enter your Access key ID from the IAM User credentials.
-- Password: Enter your Secret access key from the IAM User credentials.
-![aws_credentials](https://video.udacity-data.com/topher/2019/February/5c5aaefe_connection-aws-credentials/connection-aws-credentials.png)
-Once you've entered these values, select Save and Add Another.
+Data is inserted into Amazon Redshift Cluster. The goal is populate an star schema:
 
-4. On the next create connection page, enter the following values:
-- Conn Id: Enter redshift.
-- Conn Type: Enter Postgres.
-- Host: Enter the endpoint of your Redshift cluster, excluding the port at the end.
-- Schema: Enter dev. This is the Redshift database you want to connect to.
-- Login: Enter awsuser.
-- Password: Enter the password you created when launching your Redshift cluster.
-- Port: Enter 5439.
-![redshift](https://video.udacity-data.com/topher/2019/February/5c5aaf07_connection-redshift/connection-redshift.png)
-Once you've entered these values, select Save.
+* Fact Table:
 
-### Start the DAG
-Start the DAG by switching it state from OFF to ON.
+    * `songplays` 
 
-Refresh the page and click on the s3_to_redshift_dag to view the current state.
+* Dimension Tables
 
-The whole pipeline should take around 10 minutes to complete.
+    * `users - users in the app`
+    * `songs - songs in music database`
+    * `artists - artists in music database`
+    * `time - timestamps of records in songplays broken down into specific units`
 
+By the way we need two staging tables:
+
+* `Stage_events`
+* `Stage_songs`
+
+##### Prerequisite   
+
+Tables must be created in Redshift before executing the DAG workflow. The create tables script can be found in:
+
+`create_tables.sql`
+
+
+
+### Project Structure
+
+* /
+    * `create_tables.sql` - Contains the DDL for all tables used in this projecs
+* dags
+    * `udac_example_dag.py` - The DAG configuration file to run in Airflow
+* plugins
+    * operators
+        * `stage_redshift.py` - Operator to read files from S3 and load into Redshift staging tables
+        * `load_fact.py` - Operator to load the fact table in Redshift
+        * `load_dimension.py` - Operator to read from staging tables and load the dimension tables in Redshift
+        * `data_quality.py` - Operator for data quality checking
+    * helpers
+        * `sql_queries` - Redshift statements used in the DAG
+
+### Data Quality Checks
+
+In order to ensure the tables were loaded, 
+a data quality checking is performed to count the total records each table has. 
+If a table has no rows then the workflow will fail and throw an error message.

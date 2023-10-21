@@ -1,64 +1,54 @@
-# Import necessary modules
+from airflow.contrib.hooks.aws_hook import AwsHook
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
-from airflow.contrib.hooks.aws_hook import AwsHook
 
-# Define a custom operator for staging data from S3 to Redshift
 class StageToRedshiftOperator(BaseOperator):
-    # Set UI color for the Airflow UI
-    ui_color = '#8EB6D4'
+    ui_color = '#358140'
 
-    # Initialize the operator with required parameters
     @apply_defaults
     def __init__(self,
-                 s3_bucket,
-                 s3_prefix,
-                 table,
-                 redshift_conn_id='redshift',
-                 aws_conn_id='aws_credentials',
-                 copy_options='',
+                 aws_credentials_id="",
+                 redshift_conn_id="",
+                 table="",
+                 s3_bucket="",
+                 s3_key="",
+                 json_path="",
+                 file_type="",
+                 delimiter=",",
+                 ignore_headers=1,
                  *args, **kwargs):
+
         super(StageToRedshiftOperator, self).__init__(*args, **kwargs)
-        # Assign input parameters to instance variables
-        self.s3_bucket = s3_bucket
-        self.s3_prefix = s3_prefix
-        self.table = table
+
+        self.aws_credentials_id = aws_credentials_id
         self.redshift_conn_id = redshift_conn_id
-        self.aws_conn_id = aws_conn_id
-        self.copy_options = copy_options
+        self.table = table
+        self.s3_bucket = s3_bucket
+        self.s3_key = s3_key
+        self.json_path = json_path
+        self.file_type = file_type
+        self.delimiter = delimiter
+        self.ignore_headers = ignore_headers
 
-    # Execute method to perform the actual data staging
     def execute(self, context):
-        # Create an AWS hook to retrieve credentials
-        aws_hook = AwsHook("aws_credentials")
+
+        aws_hook = AwsHook(self.aws_credentials_id)
         credentials = aws_hook.get_credentials()
-        
-        # Create a Redshift hook to interact with the database
-        redshift_hook = PostgresHook("redshift")
+        redshift = PostgresHook(postgres_conn_id=self.redshift_conn_id)
 
-        # Log the start of data staging process
-        self.log.info(f'Preparing to stage data from {self.s3_bucket}/{self.s3_prefix} to {self.table} table...')
+        self.log.info("Copying data from S3 to Redshift")
+        rendered_key = self.s3_key.format(**context)
+        s3_path = f"s3://{self.s3_bucket}/{rendered_key}"
 
-        # Construct the COPY query for data transfer
-        copy_query = """
-                    COPY {table}
-                    FROM 's3://{s3_bucket}/{s3_prefix}'
-                    with credentials
-                    'aws_access_key_id={access_key};aws_secret_access_key={secret_key}'
-                    {copy_options};
-                """.format(table=self.table,
-                           s3_bucket=self.s3_bucket,
-                           s3_prefix=self.s3_prefix,
-                           access_key=credentials.access_key,
-                           secret_key=credentials.secret_key,
-                           copy_options=self.copy_options)
+        if self.file_type == "json":
+            cmd = f"COPY {self.table} FROM '{s3_path}' ACCESS_KEY_ID '{credentials.access_key}' SECRET_ACCESS_KEY" \
+                f" '{credentials.secret_key}' JSON '{self.json_path}' COMPUPDATE OFF"
+            redshift.run(cmd)
 
-        # Log the start of the COPY command execution
-        self.log.info('Executing COPY command...')
-        
-        # Execute the COPY command on Redshift
-        redshift_hook.run(copy_query)
-        
-        # Log the completion of the COPY command
-        self.log.info("COPY command complete.")
+        if self.file_type == "csv":
+
+            cmd = f"COPY {self.table} FROM '{s3_path}' ACCESS_KEY_ID '{credentials.access_key}' " \
+                f"SECRET_ACCESS_KEY '{credentials.secret_key}' IGNOREHEADER {self.ignore_headers} " \
+                f"DELIMITER '{self.delimiter}'"
+            redshift.run(cmd)
