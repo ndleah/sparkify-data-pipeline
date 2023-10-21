@@ -8,8 +8,6 @@ A music streaming company, Sparkify, has decided that it is time to introduce mo
 
 The source data resides in S3 and needs to be processed in Sparkify's data warehouse in Amazon Redshift. The source datasets consist of JSON logs that tell about user activity in the application and JSON metadata about the songs the users listen to.
 
-![Airflow DAG](assets/dag.png)
-
 ## Dataset
 **Note** that the actual data (in *JSON*) used in this project is a subset of original dataset preprocessed by the course. The provided data 
 resides in AWS S3 (publically available).
