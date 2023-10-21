@@ -18,27 +18,14 @@ class LoadDimensionOperator(BaseOperator):
         super(LoadDimensionOperator, self).__init__(*args, **kwargs)
 
         self.redshift_conn_id = redshift_conn_id
+        self.query = query
         self.table = table
-        self.sql_stmt = sql_stmt
-        self.append = append
+        self.load_method = load_method
 
     def execute(self, context):
-        redshift = PostgresHook(postgres_conn_id=self.redshift_conn_id)
-        self.log.info(f"Loading dimension table {self.table}")
-        sql = ""
+        postgres = PostgresHook(postgres_conn_id=self.redshift_conn_id)
 
-        if self.append:
-            sql = """
-                    BEGIN;
-                    INSERT INTO {}
-                    {};
-                    COMMIT;""".format(self.table, self.sql_stmt)
-        else:
-            sql = """
-                    BEGIN;
-                    TRUNCATE TABLE {}; 
-                    INSERT INTO {}
-                    {}; 
-                    COMMIT;""".format(self.table, self.table, self.sql_stmt)
-
-        redshift.run(sql)
+        if self.load_method == 'overwrite':
+            postgres.run(f'TRUNCATE {self.table}')
+        
+        postgres.run(f"INSERT INTO {self.table} " + self.query)

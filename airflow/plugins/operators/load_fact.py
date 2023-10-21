@@ -16,13 +16,12 @@ class LoadFactOperator(BaseOperator):
         super(LoadFactOperator, self).__init__(*args, **kwargs)
 
         self.redshift_conn_id = redshift_conn_id
+        self.query = query
         self.table = table
-        self.sql_stmt = sql_stmt
+        self.load_method = load_method
 
     def execute(self, context):
-        redshift = PostgresHook(postgres_conn_id=self.redshift_conn_id)
-        self.log.info(f"Loading fact table {self.table}")
-        sql = """INSERT INTO {} 
-                    {}; 
-                    COMMIT;""".format(self.table, self.sql_stmt)
-        redshift.run(sql)
+        postgres = PostgresHook(postgres_conn_id=self.redshift_conn_id)
+        
+        if self.load_method == 'append':
+            postgres.run(f'INSERT INTO {self.table} {self.query}')
